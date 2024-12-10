@@ -6,7 +6,7 @@ from concurrent.futures import ProcessPoolExecutor
 from scipy.stats import beta, ttest_rel
 
 
-# Initializing the street network
+# Initializing the street network graph
 def initialize_graph(place_name):
     '''
     Initializes the street network graph for a region and then sets speed and travel time properties to  the graph.
@@ -18,7 +18,7 @@ def initialize_graph(place_name):
         place_name (str): The name of the place to generate the street network graph. example-"Champaign"
 
      Returns:
-        networkx.MultiDiGraph: A graph representing the street network with speed and travel time attributes.
+        networkx.MultiDiGraph: A graph representing the street network with speed and travel time attributes. (directed graph with multiple edges between the nodes)
 
 
     '''
@@ -71,10 +71,16 @@ def apply_traffic_congestion(G, traffic_impact_probability=0.3):
 # Set a fixed hub node and extract well Connected graph
 def get_fixed_hub_and_scc(G):
     '''
+    Choosing index 0th as hub from the list and then checking if the hub exists in a strongly connected graph where every node is connected to each other.
 
+    Args:
+     G (networkx.MultiDiGraph): A network graph of a place where every node has multiple directed edges between the nodes.
 
-
-
+     Returns: 
+     tuple:
+          A tuple containing-
+          networkx.MultiDiGraph: Strongly connected graph of the place. i.e. Every node is connected to every other node in the graph.
+          int : Hub node of the graph from where all trucks would start their journey.
 
     '''
 
@@ -82,8 +88,8 @@ def get_fixed_hub_and_scc(G):
     hub_node = list(G.nodes)[0]
     print(f"[INFO] Fixed hub node set: {hub_node}")
 
-    # Extracting the largest strongly connected component (SCC) containing the hub
-    print("[INFO] Extracting largest strongly connected component (SCC)...")
+    # Extracting the largest strongly connected graph containing the hub where every node is reachable from every other node in the graph
+    print("[INFO] Extracting largest strongly connected component ...")
     if not nx.is_strongly_connected(G):
         components = nx.strongly_connected_components(G)
         for component in components:
@@ -98,6 +104,18 @@ def get_fixed_hub_and_scc(G):
 
 # Precompute shortest paths from the hub
 def precompute_shortest_paths(G, hub_node):
+    '''
+    Calculating the path which would take least amount of time to reach from hub to every other node in the graph. Using Dijkstra algorithm and edge weight as travel time, the optimized path(based on travel time) for every node would be stored.
+    
+    Args:
+     G (networkx.MultiDiGraph): A network graph of a place where every node has multiple directed edges between the nodes.
+     hub_node(int): The hub node of the graph.(starting point for all deliveries).
+
+     Returns: 
+      dictionary: Having all the optimized path(based on travel time) from hub node to every other node in graph.
+
+
+    '''
     print("[INFO] Precomputing shortest paths from the hub...")
     shortest_paths = nx.single_source_dijkstra_path_length(G, hub_node, weight="travel_time")
     print("[INFO] Precomputation complete!")
@@ -106,6 +124,19 @@ def precompute_shortest_paths(G, hub_node):
 
 # 5. Generate random delivery points
 def generate_delivery_points(G, num_deliveries, hub_node, shortest_paths):
+    '''
+    Generates a list of delivery points which are reachable from the hub node. 
+    Args:
+     G (networkx.MultiDiGraph): A network graph of a place where every node has multiple directed edges between the nodes.
+     hub_node(int): The hub node of the graph.(starting point for all deliveries).
+     num_deliveries(int): The number of delivery points that needed to be generated.
+     shortest_paths (dictionary): 
+
+
+
+
+
+    '''
     reachable_nodes = [node for node in G.nodes if node in shortest_paths]
     reachable_nodes.remove(hub_node)
     delivery_points = random.sample(reachable_nodes, min(num_deliveries, len(reachable_nodes)))
