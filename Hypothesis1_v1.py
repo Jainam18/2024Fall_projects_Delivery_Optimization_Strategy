@@ -8,6 +8,20 @@ from scipy.stats import beta, ttest_rel
 
 # Initializing the street network
 def initialize_graph(place_name):
+    '''
+    Initializes the street network graph for a region and then sets speed and travel time properties to  the graph.
+
+    The function retrieves the network graph for a location and then sets time and speed to the graph.We have assumed that Truck A's speed is 16 kph slower than Truck B's, but no lower than 16 kph.
+    
+
+    Args:
+        place_name (str): The name of the place to generate the street network graph. example-"Champaign"
+
+     Returns:
+        networkx.MultiDiGraph: A graph representing the street network with speed and travel time attributes.
+
+
+    '''
     print("[INFO] Initializing the street network for:", place_name)
     G = ox.graph_from_place(place_name, network_type='drive')
     print("[INFO] Adding speed and travel time attributes...")
@@ -26,6 +40,17 @@ def initialize_graph(place_name):
 
 # Applying traffic congestion using a PERT distribution
 def apply_traffic_congestion(G, traffic_impact_probability=0.3):
+    '''
+    Adjusting the speed by traffic factor. The traffic factor is calculated by using PERT distribution.
+
+    Args:
+        G (networkx.MultiDiGraph): The street network graph with speed attributes for Truck_a and Truck_b.
+        traffic_impact_probability (float): The probability that a given road segment will experience traffic congestion.
+                                            we are considering 30% probability of experiencing traffic at any time.(default=0.3)
+    
+    Returns:
+        networkx.MultiDiGraph: The modified graph with updated speeds reflecting traffic congestion.
+    '''
     print("[INFO] Applying traffic congestion...")
     for u, v, k, data in G.edges(keys=True, data=True):
         if random.random() < traffic_impact_probability:  # Apply congestion to a subset of roads
@@ -35,7 +60,7 @@ def apply_traffic_congestion(G, traffic_impact_probability=0.3):
             data["speed_truck_b"] *= (1 - traffic_factor)
             data["speed_truck_a"] *= (1 - traffic_factor)
 
-            # Ensuring that the speed remains realistic
+            # Ensuring that the speed remains realistic and doesn't go beyond 5kph
             data["speed_truck_b"] = max(data["speed_truck_b"], 5)  # Minimum 5 kph
             data["speed_truck_a"] = max(data["speed_truck_a"], 5)
 
@@ -43,8 +68,16 @@ def apply_traffic_congestion(G, traffic_impact_probability=0.3):
     return G
 
 
-# Set a fixed hub node and extract SCC
+# Set a fixed hub node and extract well Connected graph
 def get_fixed_hub_and_scc(G):
+    '''
+
+
+
+
+
+    '''
+
     print("[INFO] Using a fixed hub node...")
     hub_node = list(G.nodes)[0]
     print(f"[INFO] Fixed hub node set: {hub_node}")
