@@ -1,220 +1,297 @@
 import networkx as nx
 import osmnx as ox
 import random
+from networkx.algorithms.approximation import traveling_salesman_problem as tsp
+from scipy.stats import beta, ttest_rel
+import time
 import matplotlib.pyplot as plt
+import numpy as np
 
-def initialize_graph(city_name):
+def initialize_graph(place_name):
     """
-    This function when given a city name in format 'City, State, Country',
-    will return a city graph with all the location coordinates as nodes 
-    so in return we get node points and edges as two datasets.
-    
+    Initializes the city graph for a given place.
+
     Args:
-        city_name (str): Name of the city in the format 'City, State, Country'.
+        place_name (str): Name of the place in "City, State, Country" format.
 
     Returns:
-        G (networkx.Graph): A graph representing the city's nodes and edges.
-    
-    >>> G = initialize_graph("Champaign, IL, USA")
-    >>> len(G.nodes) > 0
-    True
-    >>> len(G.edges) > 0
-    True
-    >>> "location" in G.nodes[0]
-    True
+        G (networkx.Graph): The road network graph.
     """
-    G = ox.graph_from_place(city_name, network_type="drive")
+    print(f"[INFO] Initializing graph for {place_name}...")
+    G = ox.graph_from_place(place_name, network_type="drive")
+    G = ox.add_edge_speeds(G)
+    G = ox.add_edge_travel_times(G)
     return G
 
-def find_hub_node(G):
+def get_fixed_hub_and_scc(G):
     """
-    Find the central hub node which will be the delivery hub 
-    decided according to the edge centrality measure.
+    Selects a fixed hub node and extracts the largest SCC containing the hub.
 
     Args:
-        G (networkx.Graph): A graph of the city.
+        G (networkx.Graph): The road network graph.
 
     Returns:
-        hub (int): Node ID of the hub with the highest edge centrality.
+        G_scc (networkx.Graph): The largest strongly connected component with the hub.
+        hub_node (int): The fixed hub node ID.
     """
-    edge_centrality = nx.betweenness_centrality(nx.Graph(G))
-    hub_node = max(edge_centrality, key=edge_centrality.get)
-    return hub_node
 
-def generate_delivery_points(G, no_of_orders, hub_node_id):
+    hub_node = list(G.nodes)[0]
+    # Extracting the largest strongly connected component (SCC)
+    components = nx.strongly_connected_components(G)
+    for component in components:
+        if hub_node in component:
+            G_scc = G.subgraph(component).copy()
+            return G_scc, hub_node
+
+
+def apply_traffic_congestion(G, traffic_impact_probability=0.3):
+    for u, v, k, data in G.edges(keys=True, data=True):
+        if random.random() < traffic_impact_probability: 
+            maxspeed = data.get("speed_kph", 30) 
+            if isinstance(maxspeed, str): 
+                maxspeed = int(''.join(filter(str.isdigit, maxspeed)))
+            elif isinstance(maxspeed, list):  
+                if isinstance(maxspeed[0], str):  
+                    maxspeed = int(''.join(filter(str.isdigit, maxspeed[0])))  
+                else: 
+                    maxspeed = float(maxspeed[0])  
+            elif isinstance(maxspeed, (int, float)):
+                maxspeed = float(maxspeed)
+            else:
+                maxspeed = 30
+            traffic_factor = beta.rvs(2, 5, loc=0, scale=1)
+            data["speed_kph"] = maxspeed * (1 - traffic_factor)
+    return G
+
+def precompute_shortest_paths(G, hub_node):
+    shortest_paths = nx.single_source_dijkstra_path_length(G, hub_node, weight="length")
+    return shortest_paths
+
+def generate_delivery_points(G, num_points, hub_node,shortest_paths):
     """
-    Generates a number of delivery points from a graph G of a city 
-    where deliveries are to be made.
+    Generates random delivery points from the graph.
 
     Args:
-        G (networkx.Graph): A graph of the city.
-        no_of_orders (int): Number of delivery points to generate.
-        hub_node_id: ID of the node containing location of delivery hub.
+        G (networkx.Graph): The road network graph.
+        num_points (int): Number of delivery points to generate.
+        hub_node (int): The hub node ID.
 
     Returns:
-        delivery_points (list): List of node IDs selected as delivery points.
-
-    >>> import networkx as nx
-    >>> G = nx.complete_graph(10) 
-    >>> delivery_points = generate_delivery_points(G, 3)
-    >>> len(delivery_points)
-    3
-    >>> all(dp in G.nodes for dp in delivery_points)
-    True
+        delivery_points (list): List of randomly selected delivery point node IDs.
     """
-    all_nodes = list(G.nodes)
-    delivery_nodes = random.sample(all_nodes, no_of_orders)
-    if hub_node_id in delivery_nodes:
-        delivery_nodes.remove(hub_node_id)
-    return delivery_nodes
+    reachable_nodes = [node for node in G.nodes if node in shortest_paths]
+    reachable_nodes.remove(hub_node)
+    delivery_points = random.sample(reachable_nodes, min(num_points, len(reachable_nodes)))
+    return delivery_points
 
-def route_greedy_closest_first(G, hub, delivery_points):
+def plan_routes_with_greedy(G, hub_node, delivery_points, time_limit):
     """
-    Implements the greedy closest-first delivery approach.
-    
+    Plans delivery routes using a greedy approach.
+
     Args:
-        G (networkx.Graph): A graph of the city.
-        hub (int): Node ID of the delivery hub.
+        G (networkx.Graph): The road network graph.
+        hub_node (int): The hub node ID.
         delivery_points (list): List of delivery point node IDs.
+        time_limit (float): Time limit for deliveries (in hours).
 
     Returns:
-        total_distance (float): Total travel distance for the greedy approach.
-    """
-    visited = set()
-    current_node = hub
-    total_distance = 0
+        completed_deliveries (int): Number of completed deliveries.
+        total_time (float): Total time taken for deliveries (in hours).
+    """ 
+    remaining_points = delivery_points.copy()
+    total_time = 0  # Total time in hours
+    completed_deliveries = 0
+    current_node = hub_node
 
-    while len(visited) < len(delivery_points):
-        closest_node = None
-        min_distance = float('inf')
-        for node in delivery_points:
+    while remaining_points:
+        try:
+            next_node = min(remaining_points, key=lambda x: nx.shortest_path_length(G, source=current_node, target=x, weight='length'))
+            remaining_points.remove(next_node)
+            shortest_path = nx.shortest_path(G, source=current_node, target=next_node, weight='length')
+            path_time = 0
+            for i in range(len(shortest_path) - 1):
+                u, v = shortest_path[i], shortest_path[i + 1]
+                edge_data = G.get_edge_data(u, v, default={})
+                length = edge_data[0]['length']  
+                max_speed = edge_data[0]['speed_kph'] 
+                if isinstance(max_speed, list): 
+                    max_speed = float(max_speed[0])
+                path_time += (length / 1000) / max_speed
+            total_time += path_time
+            if total_time > time_limit:
+                print("[INFO] Time limit exceeded. Ending deliveries.")
+                break
+            completed_deliveries += 1
+            current_node = next_node 
+        except nx.NetworkXNoPath:
+            print(f"[WARNING] No path between {current_node} and {next_node}. Skipping.")
+            break
+    return completed_deliveries, total_time
+
+def remove_all_duplicates(path):
+        """Removes all duplicates while preserving the order of traversal."""
+        visited = set()
+        unique_path = []
+        for node in path:
             if node not in visited:
-                distance = nx.shortest_path_length(G, current_node, node, weight='length')
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_node = node
-        total_distance += min_distance
-        visited.add(closest_node)
-        current_node = closest_node
+                visited.add(node)
+                unique_path.append(node)
+        return unique_path
 
-    # Return to hub
-    total_distance += nx.shortest_path_length(G, current_node, hub, weight='length')
-    return total_distance, visited
-
-def solve_tsp_on_osmnx_graph(G, hub, delivery_points, weight='length'):
+def solve_tsp_and_calculate_deliveries(G, hub, delivery_points, time_limit, weight='length'):
     """
-    Solve Traveling Salesman Problem on a subset of nodes from an OSMnx graph
-    
-    Parameters:
-    - G: NetworkX graph from OSMnx
-    - selected_nodes: List of nodes to visit
-    - weight: Edge attribute to use as distance (default is 'length')
-    
+    Solves TSP and calculates deliveries and travel time.
+
+    Args:
+        G (networkx.Graph): City graph with travel distances and speeds.
+        hub (int): Hub node ID.
+        delivery_points (list): List of delivery point node IDs.
+        time_limit (float): Time limit for deliveries (in hours).
+        weight (str): Weight attribute for calculating distances.
+
     Returns:
-    - Optimal route through the selected nodes
-    - Total route distance
+        total_time (float): Total travel time in hours.
+        completed_deliveries (int): Number of deliveries completed.
+        tsp_path (list): The TSP route including the hub.
     """
-    delivery_points.insert(0, hub)
-    # Create a complete graph with edge weights based on shortest path lengths
-    complete_graph = nx.complete_graph(delivery_points)
-    
-    # Compute shortest path lengths between all pairs of selected nodes
+    tsp_nodes = [hub] + delivery_points
+    complete_graph = nx.complete_graph(tsp_nodes)
     for u, v in complete_graph.edges():
         try:
-            # Calculate shortest path length
             path_length = nx.shortest_path_length(G, u, v, weight=weight)
             complete_graph[u][v]['weight'] = path_length
         except nx.NetworkXNoPath:
-            # If no path exists, set a very high weight
-            complete_graph[u][v]['weight'] = float('inf')
-    
-    # Solve TSP using approximation algorithm
+            complete_graph[u][v]['weight'] = float('inf')  
     try:
         tsp_path = nx.approximation.traveling_salesman_problem(complete_graph, cycle=True)
-        
-        # Compute the actual route using shortest paths
-        full_route = []
-        route_distance = 0
-        
-        for i in range(len(tsp_path) - 1):
-            start_node = tsp_path[i]
-            end_node = tsp_path[i+1]
-            
-            # Find the shortest path between nodes
-            shortest_path = nx.shortest_path(G, start_node, end_node, weight=weight)
-            
-            # Compute path length
-            path_length = nx.path_weight(G, shortest_path, weight=weight)
-            route_distance += path_length
-            
-            # Extend route (avoid duplicates)
-            if i == 0:
-                full_route.extend(shortest_path)
-            else:
-                full_route.extend(shortest_path[1:])
-        
-        return route_distance, full_route
-    
     except nx.NetworkXError:
-        print("Could not solve TSP. Ensure nodes are connected.")
-        return None, None
+        print("[ERROR] TSP could not be solved.")
+        return None, None, None
+    tsp_path_unique = remove_all_duplicates(tsp_path)
+    total_time = 0  
+    completed_deliveries = 0
+    for i in range(len(tsp_path_unique) - 1):
+        u, v = tsp_path_unique[i], tsp_path_unique[i + 1]
+        try:
+            shortest_path = nx.shortest_path(G, u, v, weight=weight)
+            for j in range(len(shortest_path) - 1):
+                segment_u, segment_v = shortest_path[j], shortest_path[j + 1]
+                edge_data = G.get_edge_data(segment_u, segment_v, default={})
+                path_length = edge_data[0][weight]  # Use weight for path length
+                max_speed = edge_data[0]['speed_kph']  # Default to 30 kph if not specified
+                if isinstance(max_speed, list):
+                    max_speed = float(max_speed[0])
+                travel_time = (path_length / 1000) / max_speed
+                total_time += travel_time
+                if total_time > time_limit:
+                    print("[INFO] Time limit exceeded. Ending deliveries.")
+                    return total_time, completed_deliveries, tsp_path_unique
+            if v in delivery_points:
+                completed_deliveries += 1
+        except nx.NetworkXNoPath:
+            print(f"[WARNING] No path between {u} and {v}. Skipping segment.")
+            continue
+    return total_time, completed_deliveries, tsp_path
 
-def run_simulation(city_name, no_of_orders, trials=10):
+def simulation_hypothesis_2(G,num_deliveries,time_limit,iterations):
+    G_scc, hub_node = get_fixed_hub_and_scc(G)
+    shortest_paths = precompute_shortest_paths(G_scc,hub_node)
+    
+    for i in range(iterations):
+        delivery_time_greedy = []
+        delivery_time_tsp = []
+        comp_time_greedy = []
+        comp_time_tsp = []
+        for j in range(len(delivery_points)):
+            delivery_points = generate_delivery_points(G_scc, num_deliveries[j], hub_node,shortest_paths)
+            start_time_1 = time.time()
+            completed_deliveries_greedy, total_time_greedy = plan_routes_with_greedy(
+                G_scc, hub_node, delivery_points, time_limit
+            )
+            end_time_1 = time.time()
+            delivery_time_greedy.append(total_time_greedy)
+            start_time_2 = time.time()
+            total_time_tsp, completed_deliveries_tsp, route_tsp = solve_tsp_and_calculate_deliveries(
+                G_scc, hub_node, delivery_points, time_limit, weight='length'
+            )
+            end_time_2 = time.time()
+            delivery_time_tsp.append(total_time_tsp)
+
+            greedy_time = end_time_1 - start_time_1
+            tsp_time = end_time_2 - start_time_2    
+            comp_time_greedy.append(greedy_time)
+            comp_time_tsp.append(tsp_time)
+
+            print(f"For {num_deliveries[j]} deliveries in a day: ")
+            print("----------------------------------------------------------------")
+            print("Using Greedy Approach:")
+            print(f"Number of completed deliveries = {completed_deliveries_greedy}")
+            print(f"Total time taken to complete all the deliveries: {total_time_greedy}")
+            print(f"Computation time in greedy is {greedy_time}")
+            print("------------------------------------------------------------------")
+            print("Using TSP Approach: ")
+            print(f"Number of completed deliveries = {completed_deliveries_tsp}")
+            print(f"Total time taken to complete all the deliveries: {total_time_tsp}")
+            print(f"Computation time in tsp is {tsp_time}")
+            print("------------------------------------------------------------------")
+        
+    return delivery_time_greedy, delivery_time_tsp, comp_time_greedy, comp_time_tsp
+
+def plot_time_comparison(num_deliveries_list, delivery_time_greedy, delivery_time_tsp, comp_time_greedy, comp_time_tsp):
     """
-    Runs a simulation to compare TSP and greedy approaches.
+    Plots separate graphs for delivery time and computational time for Greedy and TSP approaches.
 
     Args:
-        city_name (str): Name of the city in the format 'City, State, Country'.
-        no_of_orders (int): Number of delivery points.
-        trials (int): Number of simulation trials.
+        num_deliveries_list (list): List of delivery sizes.
+        delivery_time_greedy (list): Delivery times for the Greedy approach.
+        delivery_time_tsp (list): Delivery times for the TSP approach.
+        comp_time_greedy (list): Computational times for the Greedy approach.
+        comp_time_tsp (list): Computational times for the TSP approach.
 
     Returns:
-        results (list): List of tuples (greedy_distance, tsp_distance).
+        None
     """
-    G = initialize_graph(city_name)
-    hub = find_hub_node(G)
-    results = []
+    # Plot for Delivery Times
+    plt.figure(figsize=(10, 6))
+    plt.plot(num_deliveries_list, delivery_time_greedy, marker='o', label="Greedy Approach", color='blue')
+    plt.plot(num_deliveries_list, delivery_time_tsp, marker='s', label="TSP Approach", color='cyan')
+    plt.title("Comparison of Delivery Times for Greedy vs TSP", fontsize=16)
+    plt.xlabel("Number of Deliveries", fontsize=14)
+    plt.ylabel("Delivery Time (hours)", fontsize=14)
+    plt.legend(fontsize=12)
+    plt.grid(alpha=0.5)
+    plt.tight_layout()
+    plt.show()
 
-    for _ in range(trials):
-        delivery_points = generate_delivery_points(G, no_of_orders, hub)
-        greedy_distance, visited = route_greedy_closest_first(G, hub, delivery_points)
-        tsp_distance, tsp_route = solve_tsp_on_osmnx_graph(G, hub, delivery_points)
-        # print(greedy_distance)
-        # print(visited)
-        # tsp_distance = (G, hub, delivery_points)
-        results.append((greedy_distance, tsp_distance))
-        print(visited)
-        print(tsp_route)
-        print(results)
+    # Plot for Computational Times
+    plt.figure(figsize=(10, 6))
+    plt.plot(num_deliveries_list, comp_time_greedy, marker='x', label="Greedy Approach", color='red')
+    plt.plot(num_deliveries_list, comp_time_tsp, marker='^', label="TSP Approach", color='orange')
+    plt.title("Comparison of Computational Times for Greedy vs TSP", fontsize=16)
+    plt.xlabel("Number of Deliveries", fontsize=14)
+    plt.ylabel("Computational Time (seconds)", fontsize=14)
+    plt.legend(fontsize=12)
+    plt.grid(alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+
+
+if __name__ == "__main__":
+    # Inputs
+    place_name = "Champaign, Illinois, USA"
+    num_deliveries = [20,40,60,80,100]
+    time_limit = 8  # in hours
+    iterations = 1
+    G = initialize_graph(place_name)
+    G = apply_traffic_congestion(G)
     
-    return results
-
-if __name__ == '__main__':
-    city_name = input("Enter city name in format 'City, State, Country': ")
-    no_of_orders = int(input("Enter number of delivery orders: "))
-    trials = int(input("Enter number of simulation trials: "))
-
-    results = run_simulation(city_name, no_of_orders, trials)
-    
-    # # Analyze results
-    # avg_greedy = sum(r[0] for r in results) / len(results)
-    # avg_tsp = sum(r[1] for r in results) / len(results)
-
-    # print(f"Average distance (Greedy): {avg_greedy:.2f}")
-    # print(f"Average distance (TSP): {avg_tsp:.2f}")
-    # print("Results for individual trials:")
-    # for idx, (greedy, tsp) in enumerate(results, 1):
-    #     print(f"Trial {idx}: Greedy = {greedy:.2f}, TSP = {tsp:.2f}")
-
-    # # Visualize comparison
-    # greedy_distances = [r[0] for r in results]
-    # tsp_distances = [r[1] for r in results]
-
-    # plt.figure(figsize=(10, 6))
-    # plt.plot(range(1, trials + 1), greedy_distances, label="Greedy Closest-First", marker="o")
-    # plt.plot(range(1, trials + 1), tsp_distances, label="TSP Optimized", marker="x")
-    # plt.xlabel("Trial")
-    # plt.ylabel("Total Distance")
-    # plt.title("Greedy vs TSP: Total Distance Comparison")
-    # plt.legend()
-    # plt.show()
+    del_greedy_time, del_tsp_time, comp_greedy_time, comp_tsp_time = simulation_hypothesis_2(G,num_deliveries,time_limit,iterations)
+    # print(greedy_time)
+    # print(len(tsp_time))
+    print(del_greedy_time)
+    print(del_tsp_time)
+    print(comp_greedy_time)
+    print(comp_tsp_time)
+    plot_time_comparison(num_deliveries,del_greedy_time, del_tsp_time, comp_greedy_time, comp_tsp_time)
+    plt.show()
