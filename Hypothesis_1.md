@@ -16,7 +16,7 @@ Similarly two trucks B will start from hub and start delivering packages in orde
 By this calculation we aim to calculate, Number of orders possible to be delivered in a day(8am to 5pm), we would start with order volume of 100 and then increment it by 50. At some order volume we expect both scenarios to start failing.
 
 ### Research Question:
-One big truck or two small trucks which can deliver more number of orders in a day given fixed number of orders and same set of delivery locations
+One big truck or two small trucks which can deliver more number of orders on time in a day given fixed number of orders and same set of delivery locations
 
 ### Hypothesis:
 
@@ -24,7 +24,7 @@ One big truck or two small trucks which can deliver more number of orders in a d
 2 smaller trucks (B) working simultaneously will be reliably better able to deliver more packages on time per day than using 1 larger (A) truck
 
 #### Alternate Hypothesis:
-W1 larger (A) truck working simultaneously will be reliably better able to deliver more packages on time per day than using 2 smaller trucks (B)
+The larger (A) truck working will be reliably better able to deliver more packages on time per day than using 2 smaller trucks (B) simultaneously.
 
 Random Variables-
 1. Delivery locations - for every iteration we would randomly choose the delivery coordinates, this means the distance from hub for all delivery locations varies per iteration.
@@ -40,10 +40,10 @@ Order volume for that day.
 
 Output variables-
 Time taken- total distance to reach delivery location/ speed
-Number of  
+Number of orders  
 
 If the time taken for that day is 8 hours or less and all orders are delivered then it is a succesful case where all orders were delivered on time.
 If the time taken for that day is more than 8 hours then it is a failure as all orders were not delivered on time.
 
 
-Res
+Results:
