@@ -172,7 +172,7 @@ def plot_comparison(x_orders, truck_a_percentages, truck_b_percentages):
 if __name__ == "__main__":
     place_name = "Champaign, Illinois, USA"
     initial_deliveries = 100
-    num_simulations = 10
+    num_simulations = 50
     increment = 50
     time_limit = 9
 
