@@ -1,9 +1,9 @@
 # 2024Fall_projects
 
-Topic -- Enhancing Logistic Delivery Strategies with Monte Carlo Simulation
+**Topic -- Enhancing Logistic Delivery Strategies with Monte Carlo Simulation**
 
 
-In any logistic company, they have strategies to combact various scenarios, like for example, they know that during Christmas the order volume is high so they need to be ready with high number of vechicles than usual.
+In any logistic company, they have strategies to combact various scenarios, like for example, they know that during Christmas the order volume is high so they need to be ready with higher number of vechicles than usual.
 Our project is about how external factors affect the number of on time deliveries and time taken to deliver orders. We have formulated 2 hypothesis to test two different scenarios.
 
 Hypothesis 1-
