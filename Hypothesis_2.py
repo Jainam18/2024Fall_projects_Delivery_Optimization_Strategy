@@ -5,7 +5,11 @@ from networkx.algorithms.approximation import traveling_salesman_problem as tsp
 from scipy.stats import beta, ttest_rel
 import time
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
+import pandas as pd
+import seaborn as sns
+from concurrent.futures import ProcessPoolExecutor
 
 def initialize_graph(place_name):
     """
@@ -17,7 +21,7 @@ def initialize_graph(place_name):
     Returns:
         G (networkx.Graph): The road network graph.
     """
-    print(f"[INFO] Initializing graph for {place_name}...")
+    print(f"Initializing graph for {place_name}...")
     G = ox.graph_from_place(place_name, network_type="drive")
     G = ox.add_edge_speeds(G)
     G = ox.add_edge_travel_times(G)
@@ -99,7 +103,7 @@ def plan_routes_with_greedy(G, hub_node, delivery_points, time_limit):
         total_time (float): Total time taken for deliveries (in hours).
     """ 
     remaining_points = delivery_points.copy()
-    total_time = 0  # Total time in hours
+    total_time = 0
     completed_deliveries = 0
     current_node = hub_node
 
@@ -177,8 +181,8 @@ def solve_tsp_and_calculate_deliveries(G, hub, delivery_points, time_limit, weig
             for j in range(len(shortest_path) - 1):
                 segment_u, segment_v = shortest_path[j], shortest_path[j + 1]
                 edge_data = G.get_edge_data(segment_u, segment_v, default={})
-                path_length = edge_data[0][weight]  # Use weight for path length
-                max_speed = edge_data[0]['speed_kph']  # Default to 30 kph if not specified
+                path_length = edge_data[0][weight]
+                max_speed = edge_data[0]['speed_kph'] 
                 if isinstance(max_speed, list):
                     max_speed = float(max_speed[0])
                 travel_time = (path_length / 1000) / max_speed
@@ -193,49 +197,95 @@ def solve_tsp_and_calculate_deliveries(G, hub, delivery_points, time_limit, weig
             continue
     return total_time, completed_deliveries, tsp_path
 
-def simulation_hypothesis_2(G,num_deliveries,time_limit,iterations):
+def results_to_dataframe(all_results):
+    flattened_data = []
+    for iteration_result in all_results:
+        iteration = iteration_result["iteration"]
+        for result in iteration_result["results"]:
+            flattened_data.append({
+                "iteration": iteration,
+                "strategy": result["strategy"],
+                "num_deliveries": result["num_deliveries"],
+                "completed_deliveries": result["completed_deliveries"],
+                "total_time": result["total_time"],
+                "computation_time": result["computation_time"],
+            })
+    df = pd.DataFrame(flattened_data)
+    return df
+
+def run_single_simulation(strategy, G_scc, hub_node, delivery_points, time_limit):
+    if strategy == "greedy":
+        start_time = time.time()
+        completed_deliveries, total_time = plan_routes_with_greedy(G_scc, hub_node, delivery_points, time_limit)
+        computation_time = time.time() - start_time
+        return {
+            "strategy": "greedy",
+            "num_deliveries":len(delivery_points),
+            "completed_deliveries": completed_deliveries,
+            "total_time": total_time,
+            "computation_time": computation_time,
+        }
+    elif strategy == "tsp":
+        start_time = time.time()
+        total_time, completed_deliveries, _ = solve_tsp_and_calculate_deliveries(G_scc, hub_node, delivery_points, time_limit)
+        computation_time = time.time() - start_time
+        return {
+            "strategy": "tsp",
+            "num_deliveries":len(delivery_points),
+            "completed_deliveries": completed_deliveries,
+            "total_time": total_time,
+            "computation_time": computation_time,
+        }
+    else:
+        raise ValueError("Invalid strategy. Use 'greedy' or 'tsp'.")
+
+def run_simulation_task(args):
+    """
+    Wrapper function to execute a simulation task.
+
+    Args:
+        args (tuple): A tuple containing arguments for run_single_simulation.
+
+    Returns:
+        dict: Results of the simulation.
+    """
+    return run_single_simulation(*args)
+
+
+def simulation_hypothesis_2_parallel(G, num_deliveries, time_limit, iterations):
+    """
+    Runs simulations in parallel for Greedy and TSP approaches across multiple iterations.
+
+    Args:
+        G (networkx.Graph): The road network graph.
+        num_deliveries (list): List of delivery sizes.
+        time_limit (float): Time limit for deliveries (in hours).
+        iterations (int): Number of iterations.
+
+    Returns:
+        all_results (list): List of results across iterations and strategies.
+    """
     G_scc, hub_node = get_fixed_hub_and_scc(G)
-    shortest_paths = precompute_shortest_paths(G_scc,hub_node)
-    
-    for i in range(iterations):
-        delivery_time_greedy = []
-        delivery_time_tsp = []
-        comp_time_greedy = []
-        comp_time_tsp = []
-        for j in range(len(delivery_points)):
-            delivery_points = generate_delivery_points(G_scc, num_deliveries[j], hub_node,shortest_paths)
-            start_time_1 = time.time()
-            completed_deliveries_greedy, total_time_greedy = plan_routes_with_greedy(
-                G_scc, hub_node, delivery_points, time_limit
-            )
-            end_time_1 = time.time()
-            delivery_time_greedy.append(total_time_greedy)
-            start_time_2 = time.time()
-            total_time_tsp, completed_deliveries_tsp, route_tsp = solve_tsp_and_calculate_deliveries(
-                G_scc, hub_node, delivery_points, time_limit, weight='length'
-            )
-            end_time_2 = time.time()
-            delivery_time_tsp.append(total_time_tsp)
+    shortest_paths = precompute_shortest_paths(G_scc, hub_node)
 
-            greedy_time = end_time_1 - start_time_1
-            tsp_time = end_time_2 - start_time_2    
-            comp_time_greedy.append(greedy_time)
-            comp_time_tsp.append(tsp_time)
+    all_results = []
 
-            print(f"For {num_deliveries[j]} deliveries in a day: ")
-            print("----------------------------------------------------------------")
-            print("Using Greedy Approach:")
-            print(f"Number of completed deliveries = {completed_deliveries_greedy}")
-            print(f"Total time taken to complete all the deliveries: {total_time_greedy}")
-            print(f"Computation time in greedy is {greedy_time}")
-            print("------------------------------------------------------------------")
-            print("Using TSP Approach: ")
-            print(f"Number of completed deliveries = {completed_deliveries_tsp}")
-            print(f"Total time taken to complete all the deliveries: {total_time_tsp}")
-            print(f"Computation time in tsp is {tsp_time}")
-            print("------------------------------------------------------------------")
-        
-    return delivery_time_greedy, delivery_time_tsp, comp_time_greedy, comp_time_tsp
+    for iteration in range(iterations):
+        print(f"Iteration {iteration + 1} starting...")
+        tasks = []
+        for num in num_deliveries:
+
+            delivery_points = generate_delivery_points(G_scc, num, hub_node, shortest_paths)
+            tasks.append(("greedy", G_scc, hub_node, delivery_points, time_limit))
+            tasks.append(("tsp", G_scc, hub_node, delivery_points, time_limit))
+        with ProcessPoolExecutor(max_workers=4) as executor:
+            results = list(executor.map(run_simulation_task, tasks))
+        iteration_results = {
+            "iteration": iteration + 1,
+            "results": results
+        }
+        all_results.append(iteration_results)
+    return all_results
 
 def plot_time_comparison(num_deliveries_list, delivery_time_greedy, delivery_time_tsp, comp_time_greedy, comp_time_tsp):
     """
@@ -251,7 +301,6 @@ def plot_time_comparison(num_deliveries_list, delivery_time_greedy, delivery_tim
     Returns:
         None
     """
-    # Plot for Delivery Times
     plt.figure(figsize=(10, 6))
     plt.plot(num_deliveries_list, delivery_time_greedy, marker='o', label="Greedy Approach", color='blue')
     plt.plot(num_deliveries_list, delivery_time_tsp, marker='s', label="TSP Approach", color='cyan')
@@ -262,8 +311,6 @@ def plot_time_comparison(num_deliveries_list, delivery_time_greedy, delivery_tim
     plt.grid(alpha=0.5)
     plt.tight_layout()
     plt.show()
-
-    # Plot for Computational Times
     plt.figure(figsize=(10, 6))
     plt.plot(num_deliveries_list, comp_time_greedy, marker='x', label="Greedy Approach", color='red')
     plt.plot(num_deliveries_list, comp_time_tsp, marker='^', label="TSP Approach", color='orange')
@@ -275,23 +322,15 @@ def plot_time_comparison(num_deliveries_list, delivery_time_greedy, delivery_tim
     plt.tight_layout()
     plt.show()
 
-
-
 if __name__ == "__main__":
     # Inputs
     place_name = "Champaign, Illinois, USA"
-    num_deliveries = [20,40,60,80,100]
+    num_deliveries = [200,400,600,800,1000]
     time_limit = 8  # in hours
-    iterations = 1
+    iterations = 5
     G = initialize_graph(place_name)
     G = apply_traffic_congestion(G)
-    
-    del_greedy_time, del_tsp_time, comp_greedy_time, comp_tsp_time = simulation_hypothesis_2(G,num_deliveries,time_limit,iterations)
-    # print(greedy_time)
-    # print(len(tsp_time))
-    print(del_greedy_time)
-    print(del_tsp_time)
-    print(comp_greedy_time)
-    print(comp_tsp_time)
-    plot_time_comparison(num_deliveries,del_greedy_time, del_tsp_time, comp_greedy_time, comp_tsp_time)
-    plt.show()
+    all_results = simulation_hypothesis_2_parallel(G, num_deliveries, time_limit, iterations)
+    print(all_results)
+    df = results_to_dataframe(all_results)
+    print(df.head())
