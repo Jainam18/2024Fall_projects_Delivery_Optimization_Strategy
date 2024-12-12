@@ -1,21 +1,76 @@
-# 2024Fall_projects
+# Enhancing Logistic Delivery Strategies with Monte Carlo Simulation
 
-**Topic -- Enhancing Logistic Delivery Strategies with Monte Carlo Simulation**
+### Introduction:
 
+A logistic company has a large volume of deliveries to be completed in a day. The profits and reputation of the logistic company is concerned with how efficient it is in completing the volume of orders assigned to be delivered in a day. We in this project focus on observing how different factors could influence or impact the delivery perfomance and the time taken to complete all the deliveries and draw inferencesn on which strategies would work better to optimize the number of orders delivered in least amount of time possible.
 
-In any logistic company, they have strategies to combact various scenarios, like for example, they know that during Christmas the order volume is high so they need to be ready with higher number of vechicles than usual.
-Our project is about how external factors affect the number of on time deliveries and time taken to deliver orders. We have formulated 2 hypothesis to test two different scenarios.
+### Research Questions and its Hypothesis
 
-Hypothesis 1-
-"Two smaller trucks(B) running simultaneously will deliver more number of packages on time as compared to one larger truck(A) in a day."
+In our project we work on two research questions.
 
+1. **Given two vehicle types, one big truck with capacity of 200 deliveries and two small truck with capacity of 100 deliveries which one will be more efficient for a logistic company?**
 
-Hypothesis 2- 
-"The total time taken for completing deliveries is less using the travelling salesman problem route optimization approach than greedy route strategy but the as the number of deliveries volume increases the travelling sales problem approach takes a lot of computation time"
+Hypothesis:
+Ho: We expect that that 2 smaller trucks (B) working simultaneously will be reliably better able to deliver more packages on time per day than using 1 larger (A) truck
 
-The following are assumptions that we have made -
+2. **Given two route deciding strategies one, greedy approach and other optimized Travelling Salesman Approach(TSP) of route optimization which strategy will work better for the logistic company in terms of time taken to deliver orders and computational time to calculate the route**
+
+Hypothesis:
+Ho: The total time taken for completing deliveries is less using the tsp route optimization approach than greedy route strategy but the as the number of deliveries volume increases the tsp_approach takes a lot of computation time
+
+### Assumptions:
+
 1. We have assumed that the logistic company in a day works from 8am - 5pm i.e. 8 hrs.
 2. We have assumed there is no priority assigned to the order deliveries and each of the order have same priority levels
 3. We have assumed that there are no accidents, road partitions or natural disasters taking place
 4. We have assumed the season has no effect on the speed to reach a location.
 5. We have assumed that big truck speed is 10kph less than small truck speed.
+
+### Libraries Used:
+* OSMNX
+* Networkx
+* Time
+* Random
+* Numpy
+* Pandas
+* Seaborn
+* Matplotlib
+
+### Random Variables
+* Delivery Locations
+* Traffic Congestion
+* Assignment of Delivery locations to the two small trucks for hypothesis 2
+* Speed Factore over the route after the traffic impact
+
+### Approach:
+* Graph Initialization and Preprocessing​
+* Traffic Congestion Simulation​
+* Hypothesis Approach
+* Simulation Across Delivery Sizes and Iterations​ for the Hypothesis 
+* Performance Metrics and Visualization​
+
+Results obtained currently for Hypothesis 1
+![alt text](Resultant_Plots/Precentage_of_Order_Completiong.png)
+
+Results obtained currently for Hypothesis 2
+![alt text](Resultant_Plots/delivery_time.png)
+![alt text](Resultant_Plots/computation_time.png)
+
+Things left to do:
+
+* ​To implement a code over multiple iterations and check for convergence for large number of delivery orders​
+
+* We would improve the modularity of the code to re-use some parts of code in second hypothesis instead of writing duplicating functions.​
+
+Structure to implement:
+* Utility.py
+Containing all the basic functions which are reuseable for both the hypothesis
+
+* Hypothesis1.py
+Importing utilies and having Simulation functions and results for first hypothesis
+
+* Hypothesis2.py
+Importing utilies and having Simulation functions and results for second hypothesis
+
+* Presentation.ipynb
+Combined merged final file where in we will properly present the results and also write down our inferences as markdown, with the plots
