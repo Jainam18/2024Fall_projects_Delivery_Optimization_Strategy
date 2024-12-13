@@ -39,8 +39,9 @@ Controlled variable-
 Order volume for that day.
 
 Output variables-
-Time taken- total distance to reach delivery location/ speed
-Number of orders  
+1. Time taken for a particular location - total distance to reach a delivery location from last source(source can be hub if it is 1st location or it could be delivery location that was just delivered an order)/ speed for that particular route
+
+2. Total time taken to deliver all orders- summation of time taken for all locations
 
 If the time taken for that day is 8 hours or less and all orders are delivered then it is a succesful case where all orders were delivered on time.
 If the time taken for that day is more than 8 hours then it is a failure as all orders were not delivered on time.
