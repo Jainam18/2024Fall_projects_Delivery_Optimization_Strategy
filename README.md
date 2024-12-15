@@ -49,14 +49,14 @@ Ho: The total time taken for completing deliveries is less using the tsp route o
 * Simulation Across Delivery Sizes and Iterations​ for the Hypothesis 
 * Performance Metrics and Visualization​
 
-Results obtained currently for Hypothesis 1
+### Results obtained currently for Hypothesis 1
 ![alt text](Resultant_Plots/Precentage_of_Order_Completiong.png)
 
-Results obtained currently for Hypothesis 2
+### Results obtained currently for Hypothesis 2
 ![alt text](Resultant_Plots/delivery_time.png)
 ![alt text](Resultant_Plots/computation_time.png)
 
-Things left to do:
+### Things left to do:
 
 * ​To implement a code over multiple iterations and check for convergence for large number of delivery orders​
 
@@ -74,3 +74,16 @@ Importing utilies and having Simulation functions and results for second hypothe
 
 * Presentation.ipynb
 Combined merged final file where in we will properly present the results and also write down our inferences as markdown, with the plots
+
+### References:
+* https://github.com/wenhaomin/LaDe
+
+* https://github.com/samirsaci/last-mile
+
+* https://github.com/austinlasseter/datasets-shipping-logistics
+
+* https://santhoshm.hashnode.dev/optimising-last-mile-delivery-using-open-source
+
+* https://networkx.org/documentation/stable/index.html
+
+* https://osmnx.readthedocs.io/en/stable/

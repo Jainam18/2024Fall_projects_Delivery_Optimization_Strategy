@@ -145,7 +145,7 @@ def get_fixed_hub_and_scc(Graph:netx.MultiDiGraph)-> tuple[netx.MultiDiGraph,int
         for component in components:
             if hub_node in component:
                 Graph_scc = Graph.subgraph(component).copy()
-                print("Strongly connected component with hub node contains {len(Graph_scc.nodes)} nodes.")
+                print(f"Strongly connected component with hub node contains {len(Graph_scc.nodes)} nodes.")
                 return Graph_scc, hub_node
     else:
         print("The entire graph is strongly connected.")
