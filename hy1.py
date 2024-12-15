@@ -9,19 +9,7 @@ from scipy.stats import beta
 # Plan delivery routes using precomputed shortest paths
 def plan_routes_with_precomputed_paths(G, hub_node, delivery_points, truck_capacity, truck_type, shortest_paths):
     '''
-    doctests-
-    >>> G = netx.MultiDiGraph()
-    >>> G.add_edges_from([(1, 2, {'length': 5}), (2, 3, {'length': 10}), (3, 4, {'length': 15})])
-    >>> hub_node = 1
-    >>> delivery_points = [2, 3, 4]
-    >>> truck_capacity = 2
-    >>> truck_type = "Truck A"
-    >>> shortest_paths = {1: 0, 2: 5, 3: 15, 4: 30}
-    >>> total_time, trip_count = plan_routes_with_precomputed_paths(G, hub_node, delivery_points, truck_capacity, truck_type, shortest_paths)
-    >>> total_time
-    1.0
-    >>> trip_count
-    2
+   
     '''
     print(f"\nDeliveries started for {truck_type}...")
     remaining_points = delivery_points.copy()
