@@ -172,9 +172,9 @@ def precompute_shortest_paths(Graph:netx.MultiDiGraph, hub_node:int,hypothesis:i
        return shortest_paths
     elif hypothesis==1:
        # Shortest paths for Truck A
-       shortest_paths_truck_a = netx.single_source_dijkstra_path_length(Graph, hub_node, weight="travel_time_truck_a")
+       shortest_paths_truck_a = netx.single_source_dijkstra_path_length(Graph, hub_node, weight="length")
        # Shortest paths for Truck B
-       shortest_paths_truck_b = netx.single_source_dijkstra_path_length(Graph, hub_node, weight="travel_time_truck_b")
+       shortest_paths_truck_b = netx.single_source_dijkstra_path_length(Graph, hub_node, weight="length")
        return shortest_paths_truck_a, shortest_paths_truck_b
     else:
          print("Invalid hypothesis number. Please choose either 1 or 2.")

@@ -9,6 +9,22 @@ from scipy.stats import beta
 # Plan delivery routes using precomputed shortest paths
 def plan_routes_with_precomputed_paths(G, hub_node, delivery_points, truck_capacity, truck_type, shortest_paths):
     '''
+       Calculating the total time and number of trips the truck has to make to the hub to bring new set of delivery orders.
+
+    Args-
+        
+        G (networkx.Graph): The graph representing the road network.
+        hub_node (str): The hub node where the truck starts and returns to reload.
+        delivery_points (list): A list of delivery point nodes where deliveries need to be made.
+        truck_capacity (int): The maximum number of orders/parcels the truck can carry per trip.
+        truck_type (str): A string indicating the type of the truck (e.g., "Truck A" or "Truck B").
+        shortest_paths (dict): A dictionary containing precomputed shortest path times from the hub to each delivery point.
+
+    Returns:
+        tuple: 
+          total_time(float) : Total time taken for deliveries (in hours).
+          trip_count (int)- number of trips made by truck to reload the orders.
+
    
     '''
     print(f"\nDeliveries started for {truck_type}...")
@@ -37,11 +53,38 @@ def plan_routes_with_precomputed_paths(G, hub_node, delivery_points, truck_capac
 
 # Run a single simulation for Truck A or Truck B
 def run_single_simulation(args):
+    '''
+    Runs a single delivery simulation for a specified truck type.
+
+    Args:
+        args (tuple): A tuple containing the necessary arguments for the `plan_routes_with_precomputed_paths` function.
+
+    Returns:
+        a function named "plan_routes_with_precomputed_paths" which then returns a tuple: Total time taken and number of trips for the specified truck.
+    '''
     G, hub_node, delivery_points, truck_capacity, truck_type, shortest_paths = args
     return plan_routes_with_precomputed_paths(G, hub_node, delivery_points, truck_capacity, truck_type, shortest_paths)
 
 # Monte Carlo Simulation
 def run_monte_carlo_simulation(place_name, initial_deliveries, num_simulations, increment, time_limit):
+    '''
+    Runs a Monte Carlo simulation to compare delivery efficiency of two truck types over multiple iterations.
+
+    Args:
+        place_name (str): The name of the place to initialize the delivery graph.
+        initial_deliveries (int): The initial number of delivery points.
+        num_simulations (int): The number of simulation runs to perform.
+        increment (int): The number of additional deliveries added after each simulation run.
+        time_limit (float): The maximum time limit (in hours) allowed for deliveries.
+
+    Returns:
+        tuple: Lists of percentages of orders completed within the time limit and the number of trips 
+               for each truck type across the simulations.
+
+
+
+
+    '''
     print("Starting Monte Carlo Simulation...")
     G = initializing_graph(place_name,1)
     G = apply_traffic_congestion(G,1)
@@ -60,6 +103,8 @@ def run_monte_carlo_simulation(place_name, initial_deliveries, num_simulations, 
     for simulation in range(1, num_simulations + 1):
         print(f"\nSimulation {simulation}: Running with {num_deliveries} deliveries...")
         delivery_points = generate_delivery_points(G_scc, num_deliveries, hub_node, shortest_paths_truck_a)
+
+        #we have taken size as 100 for lager truck and smaller trucks have 50 capacity each
 
         args_a = (G_scc, hub_node, delivery_points, 100, "Truck A (Large)", shortest_paths_truck_a)
         args_b1 = (G_scc, hub_node, delivery_points[:len(delivery_points)//2], 50, "Truck B1 (Small)", shortest_paths_truck_b)
@@ -91,6 +136,15 @@ def run_monte_carlo_simulation(place_name, initial_deliveries, num_simulations, 
 
 # Plot comparison graph
 def plot_comparison(x_orders, truck_a_percentages, truck_b_percentages):
+    '''
+
+    Plotting the graph for percentage of orders complted vs Number of orders.
+
+    Args-
+    x_orders(int): total number of orders 
+    truck_a_percentages(float): Percentage of orders completed by truck A.
+    truck_b_percentages(float):percentages of orders complted by truck type B.
+    '''
     plt.plot(x_orders, truck_a_percentages, label="Truck A (Large)", color="blue", marker="o")
     plt.plot(x_orders, truck_b_percentages, label="Truck B (Max of B1 and B2)", color="green", marker="x")
     plt.xlabel("Number of Orders")
@@ -107,7 +161,7 @@ if __name__ == "__main__":
     initial_deliveries = 100
     num_simulations = 50
     increment = 50
-    time_limit = 9
+    time_limit = 9 #in hours
 
     truck_a_percentages, truck_b_percentages, truck_a_trips, truck_b_trips = run_monte_carlo_simulation(
         place_name, initial_deliveries, num_simulations, increment, time_limit
