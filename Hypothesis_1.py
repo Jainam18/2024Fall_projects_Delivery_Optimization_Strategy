@@ -80,6 +80,25 @@ def run_single_simulation(args):
 
 # Monte Carlo Simulation
 def run_monte_carlo_simulation(place_name, num_deliveries, num_simulations, time_limit):
+    """
+    Runs a Monte Carlo simulation to compare the delivery efficiency of a large truck 
+    (Truck A) and two small trucks (Truck B1 and Truck B2) under traffic-congested conditions.
+
+    Parameters:
+        place_name (str): The name of the place to initialize the graph.
+        num_deliveries (int): The number of deliveries to simulate in each iteration.
+        num_simulations (int): The number of Monte Carlo simulation iterations to run.
+        time_limit (int): The maximum time allowed for deliveries.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing simulation results with the following columns:
+            - iteration: Simulation iteration number.
+            - num_deliveries: Number of deliveries in the simulation.
+            - truck_a_percentage: Percentage of orders completed by Truck A.
+            - truck_b_percentage: Percentage of orders completed by Truck B (B1 + B2).
+            - truck_a_time: Total time taken by Truck A.
+            - truck_b_time: Total time taken by Truck B (max of B1 and B2).
+    """
     print("Starting Monte Carlo Simulation...")
     G = initializing_graph(place_name, 1)
     G = apply_traffic_congestion(G, 1)
@@ -126,6 +145,15 @@ def run_monte_carlo_simulation(place_name, num_deliveries, num_simulations, time
 
 # Plot comparison graph
 def plot_comparison_efficiency(x_orders, truck_a_percentages, truck_b_percentages):
+    """
+    Plots a graph comparing the percentage of orders completed within the time limit 
+    for a large truck (Truck A) and two small trucks (Truck B1 and B2).
+
+    Parameters:
+        x_orders (list): List of the number of orders in each simulation.
+        truck_a_percentages (list): List of completion percentages for Truck A.
+        truck_b_percentages (list): List of completion percentages for Truck B.
+    """
     plt.plot(x_orders, truck_a_percentages, label="Truck A (Large)", color="blue", marker="o")
     plt.plot(x_orders, truck_b_percentages, label="Truck B (Max of B1 and B2)", color="green", marker="x")
     plt.xlabel("Number of Orders")

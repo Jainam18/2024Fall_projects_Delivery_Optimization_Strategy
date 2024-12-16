@@ -135,6 +135,26 @@ def solve_tsp_and_calculate_deliveries(G, hub, delivery_points, time_limit, weig
     return total_time, completed_deliveries, tsp_path
 
 def run_single_simulation(strategy, G_scc, hub_node, delivery_points, time_limit):
+    """
+    Runs a single delivery simulation using the specified strategy.
+
+    Parameters:
+        strategy (str): The strategy to use for planning routes. 
+                        - "greedy": Uses a greedy algorithm to plan routes.
+                        - "tsp": Solves the Traveling Salesman Problem (TSP) for optimal routing.
+        G_scc (networkx.Graph): The graph representing the strongly connected component (SCC) of the delivery area.
+        hub_node (int): The central hub node from which deliveries originate.
+        delivery_points (list): A list of nodes representing delivery points.
+        time_limit (int): The maximum allowable time to complete deliveries.
+
+    Returns:
+        dict: A dictionary containing the results of the simulation with the following keys:
+            - "strategy": The routing strategy used ("greedy" or "tsp").
+            - "num_deliveries": The total number of delivery points.
+            - "completed_deliveries": The number of deliveries completed within the time limit.
+            - "total_time": The total time taken to complete deliveries.
+            - "computation_time": The time taken to compute the routes
+    """
     if strategy == "greedy":
         start_time = time.time()
         completed_deliveries, total_time = plan_routes_with_greedy(G_scc, hub_node, delivery_points, time_limit)
