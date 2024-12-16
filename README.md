@@ -56,13 +56,11 @@ Ho: The total time taken for completing deliveries is less using the tsp route o
 ![alt text](Resultant_Plots/delivery_time.png)
 ![alt text](Resultant_Plots/computation_time.png)
 
-### Things left to do:
+### Paralle Processing Implementation
+In order to increase computing performance and to make the program runner faster, this project has integrated parallel processing, which divides jobs across several processors. Utilizing Python's ProcessPoolExecutor allows different tasks, like separate computations or simulations, to run concurrently, greatly cutting down on execution time. This method guarantees the best possible use of system resources, which makes the solution effective and scalable for managing big datasets or computationally demanding tasks.
+So for the hypothesis 1 we ran the truck A and truck B simulation together and similarly for hypothesis 2 we ran the greedy and tsp approach together parallelly
 
-* ​To implement a code over multiple iterations and check for convergence for large number of delivery orders​
-
-* We would improve the modularity of the code to re-use some parts of code in second hypothesis instead of writing duplicating functions.​
-
-Structure to implement:
+### Structure of the codebase:
 * Utility.py
 Containing all the basic functions which are reuseable for both the hypothesis
 

@@ -48,7 +48,7 @@ def initializing_graph(place_name: str, hypothesis: int) -> netx.MultiDiGraph:
            # Setting base speeds for Truck A and Truck B
           base_speed_b = data.get("speed_kph", 50)  # if no speed is found from the network graph then default speed for Truck B is 50kph.
           data["speed_truck_b"] = base_speed_b
-          data["speed_truck_a"] = max(base_speed_b - 16, 16)  # Assuming that the Truck A is slower than truck B by 16 kph
+          data["speed_truck_a"] = max(base_speed_b - 10, 10)  # Assuming that the Truck A is slower than truck B by 16 kph
       print("Graph initialization is complete!")
       return Graph
     else:
@@ -114,6 +114,7 @@ def apply_traffic_congestion(Graph:netx.MultiDiGraph,hypothesis: int, traffic_im
 
              # Calculate travel times for Truck A and Truck B
              distance = data.get("length", 1)
+             distance = distance / 1000
              data["travel_time_truck_a"] = (distance / data["speed_truck_a"])
              data["travel_time_truck_b"] = (distance / data["speed_truck_b"])
            else :
@@ -153,7 +154,7 @@ def get_fixed_hub_and_scc(Graph:netx.MultiDiGraph)-> tuple[netx.MultiDiGraph,int
 
 
 
-def precompute_shortest_paths(Graph:netx.MultiDiGraph, hub_node:int,hypothesis:int):
+def precompute_shortest_paths(Graph:netx.MultiDiGraph, hub_node:int):
     '''
     Finding out the nearest node from hub
 
@@ -167,18 +168,8 @@ def precompute_shortest_paths(Graph:netx.MultiDiGraph, hub_node:int,hypothesis:i
 
 
     '''
-    if hypothesis==2:
-       shortest_paths = netx.single_source_dijkstra_path_length(Graph, hub_node, weight="length")
-       return shortest_paths
-    elif hypothesis==1:
-       # Shortest paths for Truck A
-       shortest_paths_truck_a = netx.single_source_dijkstra_path_length(Graph, hub_node, weight="length")
-       # Shortest paths for Truck B
-       shortest_paths_truck_b = netx.single_source_dijkstra_path_length(Graph, hub_node, weight="length")
-       return shortest_paths_truck_a, shortest_paths_truck_b
-    else:
-         print("Invalid hypothesis number. Please choose either 1 or 2.")
-         return None
+    shortest_paths = netx.single_source_dijkstra_path_length(Graph, hub_node, weight="length")
+    return shortest_paths
        
 
 

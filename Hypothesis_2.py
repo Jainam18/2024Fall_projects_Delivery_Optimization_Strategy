@@ -1,9 +1,5 @@
-import utility
-import osmnx as ox
+import Utility
 import networkx as nx
-from networkx.algorithms.approximation import traveling_salesman_problem as tsp
-import random
-from scipy.stats import beta, ttest_rel
 import time
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -63,11 +59,11 @@ def plan_routes_with_greedy(G, hub_node, delivery_points, time_limit):
 
 def remove_all_duplicates(path):
     """Removes all duplicates while preserving the order of traversal.
-    >>> l = remove_all_duplicaties([12323,12344,12675,16734,12344, 16734])
+    >>> l = remove_all_duplicates([12323,12344,12675,16734,12344, 16734])
     >>> len(l) == len([12323,12344,12675,16734,12344, 16734])
     False
     >>> s = set([12323,12344,12675,16734,12344, 16734])
-    >>> len(S)==len(l)
+    >>> len(s)==len(l)
     True
     """
     visited = set()
@@ -190,8 +186,8 @@ def simulation_hypothesis_2(G, num_deliveries, time_limit, iterations):
     Returns:
         all_results (list): List of results across iterations and strategies.
     """
-    G_scc, hub_node = utility.get_fixed_hub_and_scc(G)
-    shortest_paths = utility.precompute_shortest_paths(G_scc, hub_node)
+    G_scc, hub_node = Utility.get_fixed_hub_and_scc(G)
+    shortest_paths = Utility.precompute_shortest_paths(G_scc, hub_node)
 
     all_results = []
 
@@ -200,7 +196,7 @@ def simulation_hypothesis_2(G, num_deliveries, time_limit, iterations):
         tasks = []
         for num in num_deliveries:
 
-            delivery_points = utility.generate_delivery_points(G_scc, num, hub_node, shortest_paths)
+            delivery_points = Utility.generate_delivery_points(G_scc, num, hub_node, shortest_paths)
             tasks.append(("greedy", G_scc, hub_node, delivery_points, time_limit))
             tasks.append(("tsp", G_scc, hub_node, delivery_points, time_limit))
         with ProcessPoolExecutor(max_workers=4) as executor:
@@ -212,41 +208,6 @@ def simulation_hypothesis_2(G, num_deliveries, time_limit, iterations):
         all_results.append(iteration_results)
     return all_results
 
-def plot_time_comparison(num_deliveries_list, delivery_time_greedy, delivery_time_tsp, comp_time_greedy, comp_time_tsp):
-    """
-    Plots separate graphs for delivery time and computational time for Greedy and TSP approaches.
-
-    Args:
-        num_deliveries_list (list): List of delivery sizes.
-        delivery_time_greedy (list): Delivery times for the Greedy approach.
-        delivery_time_tsp (list): Delivery times for the TSP approach.
-        comp_time_greedy (list): Computational times for the Greedy approach.
-        comp_time_tsp (list): Computational times for the TSP approach.
-
-    Returns:
-        None
-    """
-    plt.figure(figsize=(10, 6))
-    plt.plot(num_deliveries_list, delivery_time_greedy, marker='o', label="Greedy Approach", color='blue')
-    plt.plot(num_deliveries_list, delivery_time_tsp, marker='s', label="TSP Approach", color='cyan')
-    plt.title("Comparison of Delivery Times for Greedy vs TSP", fontsize=16)
-    plt.xlabel("Number of Deliveries", fontsize=14)
-    plt.ylabel("Delivery Time (hours)", fontsize=14)
-    plt.legend(fontsize=12)
-    plt.grid(alpha=0.5)
-    plt.tight_layout()
-    plt.show()
-    plt.figure(figsize=(10, 6))
-    plt.plot(num_deliveries_list, comp_time_greedy, marker='x', label="Greedy Approach", color='red')
-    plt.plot(num_deliveries_list, comp_time_tsp, marker='^', label="TSP Approach", color='orange')
-    plt.title("Comparison of Computational Times for Greedy vs TSP", fontsize=16)
-    plt.xlabel("Number of Deliveries", fontsize=14)
-    plt.ylabel("Computational Time (seconds)", fontsize=14)
-    plt.legend(fontsize=12)
-    plt.grid(alpha=0.5)
-    plt.tight_layout()
-    plt.show()
-
 def results_to_dataframe(all_results):
     """
     Converts the resultant output of the simulation to a dataframe 
@@ -255,33 +216,15 @@ def results_to_dataframe(all_results):
         all_results (list): List of results across iterations and strategies.
     Returns:
         df: A dataframe with columns iteration, results, strategy, num_deliveries, completed_deliveries, total_time, computation_time
-    >>> results = {
-    ...         "iteration": 1,
-    ...         "results": [
-    ...             {
-    ...                 "strategy": "greedy",
-    ...                 "num_deliveries": 100,
-    ...                 "completed_deliveries": 90,
-    ...                 "total_time": 500.5,
-    ...                 "computation_time": 10.2
-    ...             },
-    ...             {
-    ...                 "strategy": "optimal",
-    ...                 "num_deliveries": 120,
-    ...                 "completed_deliveries": 110,
-    ...                 "total_time": 450.3,
-    ...                 "computation_time": 15.5
-    ...             }
-    ...         ]
-    ...     }
+    >>> results = [{'iteration': 1, 'results': [{'strategy': 'greedy', 'num_deliveries': 200, 'completed_deliveries': 200, 'total_time': 3.3073054620939213, 'computation_time': 44.862642765045166}, {'strategy': 'tsp', 'num_deliveries': 200, 'completed_deliveries': 200, 'total_time': 2.982897033143903, 'computation_time': 44.8230299949646}, {'strategy': 'greedy', 'num_deliveries': 400, 'completed_deliveries': 400, 'total_time': 4.768264361218804, 'computation_time': 178.12589693069458}, {'strategy': 'tsp', 'num_deliveries': 400, 'completed_deliveries': 400, 'total_time': 4.534652384798603, 'computation_time': 192.61627388000488}, {'strategy': 'greedy', 'num_deliveries': 600, 'completed_deliveries': 600, 'total_time': 5.406827949407598, 'computation_time': 443.03445506095886}, {'strategy': 'tsp', 'num_deliveries': 600, 'completed_deliveries': 600, 'total_time': 5.295299723913028, 'computation_time': 490.08500504493713}, {'strategy': 'greedy', 'num_deliveries': 800, 'completed_deliveries': 800, 'total_time': 6.300763371752854, 'computation_time': 1818.429852962494}, {'strategy': 'tsp', 'num_deliveries': 800, 'completed_deliveries': 800, 'total_time': 6.2962532451729585, 'computation_time': 1926.2362020015717}, {'strategy': 'greedy', 'num_deliveries': 1000, 'completed_deliveries': 1000, 'total_time': 7.176981730294133, 'computation_time': 2100.916377067566}, {'strategy': 'tsp', 'num_deliveries': 1000, 'completed_deliveries': 1000, 'total_time': 6.933875444838426, 'computation_time': 2331.4957840442657}]}]
     >>> df = results_to_dataframe(results)
-    >>> columns = ['iteration', 'results', 'strategy', 'num_deliveries', 'completed_deliveries', 'total_time', 'computation_time']
+    >>> columns = ['iteration', 'strategy', 'num_deliveries', 'completed_deliveries', 'total_time', 'computation_time']
     >>> columns == list(df.columns)
     True
     >>> df['iteration'].dtype == int
     True
-    >>> len(df)==0
-    False
+    >>> len(df) > 0
+    True
     """
     flattened_data = []
     for iteration_result in all_results:
@@ -298,15 +241,76 @@ def results_to_dataframe(all_results):
     df = pd.DataFrame(flattened_data)
     return df
 
+def plot_over_iterations(df):
+    """
+    It plots a graph which compares the total time taken to deliver the orders by two different approaches over mulitple set of iterations
+    """
+    iterations = sorted(df['iteration'].unique())
+    strategies = ['greedy', 'tsp']
+    cmap = cm.get_cmap('tab10', len(iterations))
+    colors = {iteration: cmap(i) for i, iteration in enumerate(iterations)}
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6), sharex=True, sharey=True)
+    for i, strategy in enumerate(strategies):
+        strategy_data = df[df['strategy'] == strategy]
+        for iteration in iterations:
+            iteration_data = strategy_data[strategy_data['iteration'] == iteration]
+            axes[i].plot(
+                iteration_data['num_deliveries'], 
+                iteration_data['total_time'], 
+                label=f"Iteration {iteration}", 
+                color=colors[iteration], 
+                marker='o',
+                alpha=0.7
+            )
+        axes[i].set_title(f"{strategy.capitalize()} Approach", fontsize=14)
+        axes[i].set_xlabel("Number of Deliveries", fontsize=12)
+        if i == 0:
+            axes[i].set_ylabel("Total Time (hours)", fontsize=12)
+        axes[i].grid(alpha=0.5)
+        axes[i].legend(title="Iterations", fontsize=10, loc="best")
+    plt.suptitle("Delivery Time vs Number of Deliveries Across Iterations", fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.show()
+
+def plot_comparison_time_and_comp(df):
+    """
+    Plots over an single iteration to show comparison of how the tsp time and the greedy time varies over the different number of delivery orders.
+    """
+    iteration = 1
+    iteration_data = df[df['iteration'] == iteration]
+    approaches = iteration_data['strategy'].unique()  # ['greedy', 'tsp']
+    num_deliveries = iteration_data['num_deliveries'].unique()
+    comp_time = iteration_data.pivot(index='num_deliveries', columns='strategy', values='computation_time')
+    total_time = iteration_data.pivot(index='num_deliveries', columns='strategy', values='total_time')
+    x = np.arange(len(comp_time.index))
+    width = 0.25
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    # Plot comp_time
+    ax1.bar(x - width/2, comp_time['greedy'], width, label='greedy')
+    ax1.bar(x + width/2, comp_time['tsp'], width, label='tsp')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(comp_time.index)
+    ax1.set_title('Computation Time')
+    ax1.legend()
+    # Plot total_time
+    ax2.bar(x - width/2, total_time['greedy'], width, label='greedy')
+    ax2.bar(x + width/2, total_time['tsp'], width, label='tsp')
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(total_time.index)
+    ax2.set_title('Total Time')
+    ax2.legend()
+    plt.tight_layout()
+    plt.show()
+
 
 if __name__ == "__main__":
     # Inputs
     place_name = "Champaign, Illinois, USA"
-    num_deliveries = [200,400,600,800,1000]
+    num_deliveries = [20,40,60,80,100]
     time_limit = 8  # in hours
     iterations = 1
-    G = utility.initializing_graph(place_name,hypothesis=2)
-    G = utility.apply_traffic_congestion(G,hypothesis=2)
+    G = Utility.initializing_graph(place_name,hypothesis=2)
+    G = Utility.apply_traffic_congestion(G,hypothesis=2)
     all_results = simulation_hypothesis_2(G, num_deliveries, time_limit, iterations)
     print(all_results)
     df = results_to_dataframe(all_results)
@@ -318,3 +322,5 @@ if __name__ == "__main__":
     else:
         df.to_csv(output_file, index=False)
     print(f"Results appended to {output_file}.")
+    plot_comparison_time_and_comp(df)
+    plot_over_iterations(df)
