@@ -5,7 +5,7 @@
 We will use map (**OSMX** libraray of python for map) of small area like **Champaign**. We would have X(order volume for that day) as number of packages(along with destination's latitude and longitude coordinates) to be delivered from a hub to destination(apartment's of people).
 
 
-Now we will consider a truck A(bigger truck) which has capacity of 200 orders and 2 trucks B(smaller trucks) of capacity 50(half of larger truck) each.
+Now we will consider a truck A(bigger truck) which has capacity of 200 orders and 2 trucks B(smaller trucks) of capacity 100(half of larger truck) each.
 
 Scenario 1-
 Now our truck A will start from hub and start delivering packages in order. We would here calculate the time taken and determine number of packages that were delivered on time.

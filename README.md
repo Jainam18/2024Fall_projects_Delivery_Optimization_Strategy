@@ -40,7 +40,7 @@ Ho: The total time taken for completing deliveries is less using the tsp route o
 * Delivery Locations
 * Traffic Congestion
 * Assignment of Delivery locations to the two small trucks for hypothesis 2
-* Speed Factore over the route after the traffic impact
+* Speed Factor over the route after the traffic impact
 
 ### Approach:
 * Graph Initialization and Preprocessing​
@@ -55,7 +55,7 @@ Results for both the hypothesis and detailed overview about the hypothesis infer
 ### Final Conclusion of the project
 The results of this project indicate that two smaller trucks (B) working simultaneously are consistently more effective at delivering packages on time per day compared to one larger truck (A), particularly as the number of orders increases, supporting the Null Hypothesis. While the TSP approach (utilizing the larger truck) achieves better delivery times, it comes at a significantly higher computational cost. On the other hand, the Greedy approach (using smaller trucks) is more computationally efficient, making it a more practical solution for larger delivery volumes where computation time becomes a critical factor. Therefore, while the Alternate Hypothesis holds true for smaller delivery volumes where computation cost is less significant, the Null Hypothesis proves to be more practical and scalable for larger volumes due to its computational efficiency and reliability in meeting delivery demands.
 
-### Paralle Processing Implementation
+### Parallel Processing Implementation
 In order to increase computing performance and to make the program runner faster, this project has integrated parallel processing, which divides jobs across several processors. Utilizing Python's ProcessPoolExecutor allows different tasks, like separate computations or simulations, to run concurrently, greatly cutting down on execution time. This method guarantees the best possible use of system resources, which makes the solution effective and scalable for managing big datasets or computationally demanding tasks.
 So for the hypothesis 1 we ran the truck A and truck B simulation together and similarly for hypothesis 2 we ran the greedy and tsp approach together parallelly.
 
