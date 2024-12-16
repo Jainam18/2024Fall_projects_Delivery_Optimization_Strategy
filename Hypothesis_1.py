@@ -5,7 +5,7 @@ import random
 import matplotlib.pyplot as plt
 from concurrent.futures import ProcessPoolExecutor
 from scipy.stats import beta
-
+import pandas as pd
 
 
 def plan_routes(G, hub_node, delivery_points, time_limit, truck_type, truck_capacity):
@@ -79,53 +79,49 @@ def run_single_simulation(args):
 
 
 # Monte Carlo Simulation
-def run_monte_carlo_simulation(place_name, initial_deliveries, num_simulations, increment, time_limit):
+def run_monte_carlo_simulation(place_name, num_deliveries, num_simulations, time_limit):
     print("Starting Monte Carlo Simulation...")
     G = initializing_graph(place_name, 1)
     G = apply_traffic_congestion(G, 1)
     G_scc, hub_node = get_fixed_hub_and_scc(G)
 
     shortest_paths = precompute_shortest_paths(G_scc, hub_node)
-    
-    x_orders = []
-    truck_a_percentages = []
-    truck_b_percentages = []
-    truck_a_time = []
-    truck_b_time = []
+    results_data = []
+    # iterations = []
+    # truck_a_percentages = []
+    # truck_b_percentages = []
+    # truck_a_time = []
+    # truck_b_time = []
 
-    num_deliveries = initial_deliveries
+    for iteration in range(1,num_simulations+1):
+        print(f"\nSimulation {iteration}: Running with {num_deliveries} deliveries...")
+        for deliveries in num_deliveries:
+            delivery_points = generate_delivery_points(G_scc, deliveries, hub_node,shortest_paths)
 
-    for simulation in range(1, num_simulations + 1):
-        print(f"\nSimulation {simulation}: Running with {num_deliveries} deliveries...")
-        delivery_points = generate_delivery_points(G_scc, num_deliveries, hub_node,shortest_paths)
+            # Truck capacities: Large Truck (200), Small Trucks (100 each)
+            args_a = (G_scc, hub_node, delivery_points, time_limit, "Truck A (Large)", 200)
+            args_b1 = (G_scc, hub_node, delivery_points[:len(delivery_points) // 2], time_limit,  "Truck B1 (Small)",100)
+            args_b2 = (G_scc, hub_node, delivery_points[len(delivery_points) // 2:], time_limit,  "Truck B2 (Small)",100)
 
-        # Truck capacities: Large Truck (100), Small Trucks (50 each)
-        args_a = (G_scc, hub_node, delivery_points, time_limit, "Truck A (Large)", 200)
-        args_b1 = (G_scc, hub_node, delivery_points[:len(delivery_points) // 2], time_limit,  "Truck B1 (Small)",100)
-        args_b2 = (G_scc, hub_node, delivery_points[len(delivery_points) // 2:], time_limit,  "Truck B2 (Small)",100)
+            with ProcessPoolExecutor(max_workers=3) as executor:
+                results = executor.map(run_single_simulation, [args_a, args_b1, args_b2])
+            (completed_del_a,total_time_a), (completed_del_b1,total_time_b1), (completed_del_b2,total_time_b2) = results
+            total_time_b = max(total_time_b1, total_time_b2)
+            completed_del_b = completed_del_b1 + completed_del_b2
 
-        with ProcessPoolExecutor(max_workers=3) as executor:
-            results = executor.map(run_single_simulation, [args_a, args_b1, args_b2])
-        # print(results)
-        (completed_del_a,total_time_a), (completed_del_b1,total_time_b1), (completed_del_b2,total_time_b2) = results
-
-        total_time_b = max(total_time_b1, total_time_b2)
-        completed_del_b = completed_del_b1 + completed_del_b2
-
-        # Calculate percentages based on deliveries completed within the time limit
-        truck_a_percentage = (completed_del_a / num_deliveries) * 100
-        truck_b_percentage = (completed_del_b / num_deliveries) * 100
-
-        truck_a_percentages.append(truck_a_percentage)
-        truck_b_percentages.append(truck_b_percentage)
-        truck_a_time.append(total_time_a)
-        truck_b_time.append(total_time_b)
-        x_orders.append(num_deliveries)
-        num_deliveries += increment
-
-    plot_comparison_efficiency(x_orders, truck_a_percentages, truck_b_percentages)
-    plot_comparison_time(x_orders,truck_a_time,truck_b_time)
-    return truck_a_percentages, truck_b_percentages, truck_a_time, truck_b_time
+            # Calculate percentages based on deliveries completed within the time limit
+            truck_a_percentage = (completed_del_a / deliveries) * 100
+            truck_b_percentage = (completed_del_b / deliveries) * 100
+            results_data.append({
+                'iteration': iteration,
+                'num_deliveries': deliveries,
+                'truck_a_percentage': truck_a_percentage,
+                'truck_b_percentage': truck_b_percentage,
+                'truck_a_time': total_time_a,
+                'truck_b_time': total_time_b
+            })
+    df_results = pd.DataFrame(results_data)
+    return df_results
 
 
 # Plot comparison graph
@@ -153,11 +149,18 @@ def plot_comparison_time(x_orders, truck_a_time, truck_b_time):
 # Run the simulation
 if __name__ == "__main__":
     place_name = "Champaign, Illinois, USA"
-    initial_deliveries = 200
+    num_deliveries = [250,500,750,1000,1250,1500]
     num_simulations = 8
-    increment = 200
     time_limit = 9 #in hours 8am to 5pm
 
-    truck_a_percentages, truck_b_percentages, truck_a_time, truck_b_time = run_monte_carlo_simulation(
-        place_name, initial_deliveries, num_simulations, increment, time_limit
+    df = run_monte_carlo_simulation(
+        place_name, num_deliveries, num_simulations, time_limit
     )
+    df.to_csv('Results_Hypothesis_1.csv')
+    df_iteration = df[df['iteration']==1]
+    truck_a_eff = df_iteration['truck_a_percentage']
+    truck_b_eff = df_iteration['truck_b_percentage']
+    truck_a_time = df_iteration['truck_a_time']
+    truck_b_time = df_iteration['truck_b_time']
+    plot_comparison_time(num_deliveries,truck_a_time,truck_b_time)
+    plot_comparison_efficiency(num_deliveries,truck_a_eff,truck_b_eff)

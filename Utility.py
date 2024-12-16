@@ -164,9 +164,6 @@ def precompute_shortest_paths(Graph:netx.MultiDiGraph, hub_node:int):
 
     return:
     dictionary: shortest path from hub to all nodes in the graph
-
-
-
     '''
     shortest_paths = netx.single_source_dijkstra_path_length(Graph, hub_node, weight="length")
     return shortest_paths
@@ -184,8 +181,14 @@ def generate_delivery_points(Graph, num_deliveries, hub_node, shortest_paths):
 
     return:
     list: list of delivery points
-
-    
+    >>> g = initializing_graph("Piedmont, California, USA", 1)
+    >>> G, hub = get_fixed_hub_and_scc(g)
+    >>> shortest_paths = precompute_shortest_paths(G,hub)
+    >>> delivery_points = generate_delivery_points(G,10,hub,shortest_paths)
+    >>> hub not in delivery_points
+    True
+    >>> len(delivery_points) == min(10, len([node for node in G.nodes if node in shortest_paths and node != hub]))
+    True
     '''
     reachable_nodes = [node for node in Graph.nodes if node in shortest_paths]
     reachable_nodes.remove(hub_node)

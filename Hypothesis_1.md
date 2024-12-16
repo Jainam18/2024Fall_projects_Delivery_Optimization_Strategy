@@ -5,7 +5,7 @@
 We will use map (**OSMX** libraray of python for map) of small area like **Champaign**. We would have X(order volume for that day) as number of packages(along with destination's latitude and longitude coordinates) to be delivered from a hub to destination(apartment's of people).
 
 
-Now we will consider a truck A(bigger truck) which has capacity of 100 and 2 trucks B(smaller trucks) of capacity 50(half of larger truck) each.
+Now we will consider a truck A(bigger truck) which has capacity of 200 orders and 2 trucks B(smaller trucks) of capacity 50(half of larger truck) each.
 
 Scenario 1-
 Now our truck A will start from hub and start delivering packages in order. We would here calculate the time taken and determine number of packages that were delivered on time.
@@ -13,7 +13,7 @@ Now our truck A will start from hub and start delivering packages in order. We w
 Scenario 2-
 Similarly two trucks B will start from hub and start delivering packages in order and we would calculate the time taken by each truck and determine number of packages that were delivered on time.
 
-By this calculation we aim to calculate, Number of orders possible to be delivered in a day(8am to 5pm), we would start with order volume of 100 and then increment it by 50. At some order volume we expect both scenarios to start failing.
+By this calculation we aim to calculate, Number of orders possible to be delivered in a day(8am to 5pm), we would observe the results over different order volumes. At some order volume we expect both scenarios to start failing.
 
 ### Research Question:
 One big truck or two small trucks which can deliver more number of orders on time in a day given fixed number of orders and same set of delivery locations
